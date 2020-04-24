@@ -261,7 +261,7 @@ public:
         return sockfd;
     }
 
-    static void getFile(std::string uri)
+    static std::string getFile(std::string uri)
     {
         struct uri websiteURI = parseURI(uri);
         int port = websiteURI.port == -1 ? 80 : websiteURI.port;
@@ -298,6 +298,6 @@ public:
             response.parse(std::string(buffer));
         }
 
-        std::cout << response.getHeaderString() << std::endl;
+        return response.body;
     }
 };

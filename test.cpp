@@ -3,6 +3,6 @@
 
 int main()
 {
-    HTTPClient::getFile("http://neverssl.com/");
+    std::cout << HTTPClient::getFile("http://neverssl.com/") << std::endl;
     return 0;
 }
