@@ -12,6 +12,7 @@
 #include <vector>
 #include <string>
 #include <map>
+#include <openssl/ssl.h>
 
 #define BUFFERSIZE 8192
 
@@ -215,6 +216,17 @@ public:
             }
             toReturn.port = std::stoi(portTemp);
         }
+        else
+        {
+            if(toReturn.protocol == "http")
+            {
+                toReturn.port = 80;
+            }
+            else if(toReturn.protocol == "https")
+            {
+                toReturn.port = 443;
+            }
+        }
         while(index < uri.size())
         {
             toReturn.path += uri[index];
@@ -279,13 +291,45 @@ public:
 
         std::string headerString = request.getHeaderString();
 
-        send(sockfd, headerString.c_str(), headerString.size(), 0);
+        bool ssl = websiteURI.protocol == "https";
+
+        //init SSL
+        SSL_CTX* ssl_ctx;
+        SSL* conn = SSL_new(ssl_ctx);
+        if(ssl)
+        {
+            SSL_load_error_strings();
+            SSL_library_init();
+            ssl_ctx = SSL_CTX_new(SSLv23_client_method());
+
+            conn = SSL_new(ssl_ctx);
+            SSL_set_fd(conn, sockfd);
+
+            SSL_connect(conn);
+        }
+
+        if(ssl)
+        {
+            SSL_write(conn, headerString.c_str(), headerString.size());
+        }
+        else
+        {
+            send(sockfd, headerString.c_str(), headerString.size(), 0);
+        }
 
         HTTPHeader response;
 
         char headerBuffer[8192];
 
-        int headerRecieved = recv(sockfd, headerBuffer, 8191, 0);
+        int headerRecieved;
+        if(ssl)
+        {
+            headerRecieved = SSL_read(conn, headerBuffer, 8191);
+        }
+        else
+        {
+            headerRecieved = recv(sockfd, headerBuffer, 8191, 0);
+        }
         headerBuffer[headerRecieved + 1] = '\0';
 
         response.parse(std::string(headerBuffer));
@@ -293,7 +337,15 @@ public:
         while(response.body.size() != std::stoi(response.headers.find("Content-Length")->second))
         {
             char buffer[8192];
-            int recieved = recv(sockfd, buffer, 8191, 0);
+            int recieved;
+            if(ssl)
+            {
+                recieved = SSL_read(conn, buffer, 8191);
+            }
+            else
+            {
+                recieved = recv(sockfd, buffer, 8191, 0);
+            }
             buffer[recieved + 1] = '\0';
             response.parse(std::string(buffer));
         }
