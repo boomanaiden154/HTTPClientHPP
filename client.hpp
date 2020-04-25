@@ -32,6 +32,9 @@ public:
     std::string fieldValue;
     bool parsingFieldName;
     bool parsingHeader;
+    bool isDone;
+    int currentChunkLength;
+    std::string currentChunk;
 
     std::string requestType()
     {
@@ -93,6 +96,58 @@ public:
         parsingFieldName = true;
         isRequest = isRequest_;
         parsingHeader = true;
+        isDone = false;
+        currentChunkLength = 0;
+    }
+
+    void parseChunk(const std::string& input)
+    {
+        if(input.size() != 0)
+        {
+            int inputIndex = 0;
+            if(currentChunkLength - currentChunk.size() == 0)
+            {
+                body += currentChunk;
+                currentChunk.clear();
+                currentChunkLength = 0;
+                //parse chunk header
+                std::string chunkLength;
+                while(input[inputIndex] != '\r' && input[inputIndex] != '\n')
+                {
+                    chunkLength += input[inputIndex];
+                    inputIndex++;
+                }
+                currentChunkLength = std::stoi(chunkLength, nullptr, 16);
+                if(currentChunkLength == 0)
+                {
+                    isDone = true;
+                }
+                inputIndex += 2;
+            }
+            if(currentChunkLength - currentChunk.size() < input.size() - inputIndex)
+            {
+                int deltaChunkLength = currentChunkLength - currentChunk.size();
+                currentChunk += input.substr(inputIndex, deltaChunkLength);
+                //input.size() is one greater than the last index, and get rid of \r\n at the end
+                parseChunk(input.substr(inputIndex + deltaChunkLength, input.size() - (inputIndex + deltaChunkLength) - 3));
+            }
+            else
+            {
+                currentChunk += input.substr(inputIndex, input.size() - inputIndex); 
+            }
+        }
+    }
+
+    void parseData(const std::string& input)
+    {
+        if(headers.find("Transfer-Encoding") != headers.end() && headers.find("Transfer-Encoding")->second == "chunked")
+        {
+            parseChunk(input);
+        }
+        else
+        {
+            body += input;
+        }
     }
 
     void parse(std::string input)
@@ -121,11 +176,11 @@ public:
                 }
                 bufferIndex += 2;
             }
-            while(buffer[bufferIndex] != '\r' && buffer[bufferIndex + 1] != '\n')
+            while(buffer[bufferIndex] != '\r' && buffer[bufferIndex + 1] != '\n' && bufferIndex < buffer.size())
             {
                 if(parsingFieldName)
                 {
-                    while(buffer[bufferIndex] != ':' && buffer[bufferIndex + 1] != ' ')
+                    while(buffer[bufferIndex] != ':' && buffer[bufferIndex + 1] != ' ' && bufferIndex < buffer.size())
                     {
                         fieldName += buffer[bufferIndex];
                         bufferIndex++;
@@ -135,7 +190,7 @@ public:
                 }
                 else
                 {
-                    while(buffer[bufferIndex] != '\r' && buffer[bufferIndex + 1] != '\n')
+                    while(buffer[bufferIndex] != '\r' && buffer[bufferIndex + 1] != '\n' && bufferIndex < buffer.size())
                     {
                         fieldValue += buffer[bufferIndex];
                         bufferIndex++;
@@ -147,13 +202,24 @@ public:
                     parsingFieldName = true;
                 }
             }
-            bufferIndex += 2; //for final \r\n
-            body += buffer.substr(bufferIndex, buffer.size() - bufferIndex);
-            parsingHeader = false;
+            if(buffer[bufferIndex - 2] == '\r' && buffer[bufferIndex - 1] == '\n' && buffer[bufferIndex] == '\r' && buffer[bufferIndex + 1] == '\n')
+            {
+                bufferIndex += 2; //for final \r\n
+                parseData(buffer.substr(bufferIndex, buffer.size() - bufferIndex));
+                parsingHeader = false;
+                if(headers.find("Content-Length") != headers.end() && std::stoi(headers.find("Content-Length")->second) == body.size())
+                {
+                    isDone = true;
+                }
+            }
         }
         else
         {
-            body += input;
+            parseData(input);
+            if(headers.find("Content-Length") != headers.end() && std::stoi(headers.find("Content-Length")->second) == body.size())
+            {
+                isDone = true;
+            }
         }
     }
 
@@ -273,7 +339,7 @@ public:
         return sockfd;
     }
 
-    static std::string getFile(std::string uri)
+    static std::string getFile(std::string uri, std::multimap<std::string, std::string> headers = std::multimap<std::string, std::string>())
     {
         struct uri websiteURI = parseURI(uri);
         int port = websiteURI.port == -1 ? 80 : websiteURI.port;
@@ -282,12 +348,18 @@ public:
 
         HTTPHeader request(true);
         request.headerField1 = "GET";
-        request.headerField2 = "/";
+        request.headerField2 = websiteURI.path;
         request.headerField3 = "HTTP/1.1";
 
         request.headers.insert(std::pair<std::string,std::string>("Host",websiteURI.domain));
         request.headers.insert(std::pair<std::string,std::string>("User-Agent","custom/0.0.1"));
         request.headers.insert(std::pair<std::string,std::string>("Accept","*/*"));
+
+        std::multimap<std::string,std::string>::iterator itr;
+        for(itr = headers.begin(); itr != headers.end(); itr++)
+        {
+            request.headers.insert(std::pair<std::string,std::string>(itr->first, itr->second));
+        }
 
         std::string headerString = request.getHeaderString();
 
@@ -334,7 +406,9 @@ public:
 
         response.parse(std::string(headerBuffer));
 
-        while(response.body.size() != std::stoi(response.headers.find("Content-Length")->second))
+        //std::cout << response.getHeaderString() << std::endl;
+
+        while(!response.isDone)
         {
             char buffer[8192];
             int recieved;

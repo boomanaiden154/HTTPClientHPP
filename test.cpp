@@ -3,6 +3,8 @@
 
 int main()
 {
-    std::cout << HTTPClient::getFile("http://neverssl.com") << std::endl;
+    std::string test = HTTPClient::getFile("https://postman-echo.com/stream/5");
+    //std::cout << HTTPClient::getFile("http://neverssl.com/");
+    std::cout << test << std::endl;
     return 0;
 }
