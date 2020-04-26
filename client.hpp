@@ -130,8 +130,8 @@ public:
                 {
                     int deltaChunkLength = currentChunkLength - currentChunk.size();
                     currentChunk += input.substr(inputIndex, deltaChunkLength);
-                    //input.size() is one greater than the last index, and get rid of \r\n at the end
-                    parseChunk(input.substr(inputIndex + deltaChunkLength, input.size() - (inputIndex + deltaChunkLength) - 2));
+                    //parseChunk(input.substr(inputIndex + deltaChunkLength + 2, input.size() - (inputIndex + deltaChunkLength + 2)));
+                    parseChunk(std::string(input.begin() + inputIndex + deltaChunkLength + 2, input.end()));
                 }
                 else
                 {
@@ -405,7 +405,7 @@ public:
         {
             headerRecieved = recv(sockfd, headerBuffer, 8191, 0);
         }
-        headerBuffer[headerRecieved + 1] = '\0';
+        headerBuffer[headerRecieved] = '\0';
 
         response.parse(std::string(headerBuffer));
 
@@ -423,7 +423,7 @@ public:
             {
                 recieved = recv(sockfd, buffer, 8191, 0);
             }
-            buffer[recieved + 1] = '\0';
+            buffer[recieved] = '\0';
             response.parse(std::string(buffer));
         }
 
