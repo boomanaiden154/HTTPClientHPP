@@ -3,6 +3,6 @@
 
 int main()
 {
-    std::cout << HTTPClient::getFile("https://postman-echo.com/stream/5") << std::endl;
+    std::cout << HTTPClient::getFile("https://postman-echo.com/stream/5").body << std::endl;
     return 0;
 }

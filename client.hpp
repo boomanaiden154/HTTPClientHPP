@@ -342,7 +342,7 @@ public:
         return sockfd;
     }
 
-    static std::string getFile(std::string uri, std::multimap<std::string, std::string> headers = std::multimap<std::string, std::string>())
+    static HTTPHeader getFile(std::string uri, std::multimap<std::string, std::string> headers = std::multimap<std::string, std::string>())
     {
         struct uri websiteURI = parseURI(uri);
         int port = websiteURI.port == -1 ? 80 : websiteURI.port;
@@ -427,6 +427,6 @@ public:
             response.parse(std::string(buffer));
         }
 
-        return response.body;
+        return response;
     }
 };
