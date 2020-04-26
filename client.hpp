@@ -124,16 +124,19 @@ public:
                 }
                 inputIndex += 2;
             }
-            if(currentChunkLength - currentChunk.size() < input.size() - inputIndex)
+            if(!isDone)
             {
-                int deltaChunkLength = currentChunkLength - currentChunk.size();
-                currentChunk += input.substr(inputIndex, deltaChunkLength);
-                //input.size() is one greater than the last index, and get rid of \r\n at the end
-                parseChunk(input.substr(inputIndex + deltaChunkLength, input.size() - (inputIndex + deltaChunkLength) - 3));
-            }
-            else
-            {
-                currentChunk += input.substr(inputIndex, input.size() - inputIndex); 
+                if(currentChunkLength - currentChunk.size() < input.size() - inputIndex)
+                {
+                    int deltaChunkLength = currentChunkLength - currentChunk.size();
+                    currentChunk += input.substr(inputIndex, deltaChunkLength);
+                    //input.size() is one greater than the last index, and get rid of \r\n at the end
+                    parseChunk(input.substr(inputIndex + deltaChunkLength, input.size() - (inputIndex + deltaChunkLength) - 2));
+                }
+                else
+                {
+                    currentChunk += input.substr(inputIndex, input.size() - inputIndex); 
+                }
             }
         }
     }
