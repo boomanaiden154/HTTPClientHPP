@@ -370,7 +370,7 @@ public:
 
         //init SSL
         SSL_CTX* ssl_ctx;
-        SSL* conn = SSL_new(ssl_ctx);
+        SSL* conn;
         if(ssl)
         {
             SSL_load_error_strings();
