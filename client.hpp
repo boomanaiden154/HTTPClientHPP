@@ -15,6 +15,7 @@
 #include <openssl/ssl.h>
 #include <cctype>
 #include <algorithm>
+#include <sstream>
 
 #define BUFFERSIZE 8192
 
@@ -305,6 +306,25 @@ public:
             toReturn.path += uri[index];
             index++;
         }
+        return toReturn;
+    }
+
+    static std::vector<std::string> parsePath(std::string path)
+    {
+        std::stringstream pathStream(path);
+        std::string segment;
+        std::vector<std::string> toReturn;
+
+        while(std::getline(pathStream, segment, '/'))
+        {
+            toReturn.push_back(segment);
+        }
+
+        if(path[0] == '/')
+        {
+            toReturn.erase(toReturn.begin());
+        }
+
         return toReturn;
     }
 
