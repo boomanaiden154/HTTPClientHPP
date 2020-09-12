@@ -13,6 +13,8 @@
 #include <string>
 #include <map>
 #include <openssl/ssl.h>
+#include <cctype>
+#include <algorithm>
 
 #define BUFFERSIZE 8192
 
@@ -102,7 +104,7 @@ public:
 
     void parseChunk(const std::string& input)
     {
-        if(input.size() != 0)
+        if(input.size() > 2)
         {
             int inputIndex = 0;
             if(currentChunkLength - currentChunk.size() == 0)
@@ -143,7 +145,9 @@ public:
 
     void parseData(const std::string& input)
     {
-        if(headers.find("Transfer-Encoding") != headers.end() && headers.find("Transfer-Encoding")->second == "chunked")
+        std::cout << "input size:" << input.size() << std::endl;
+        std::cout << "body size:" << body.size() << std::endl;
+        if(headers.find("transfer-encoding") != headers.end() && headers.find("transfer-encoding")->second == "chunked")
         {
             parseChunk(input);
         }
@@ -151,6 +155,7 @@ public:
         {
             body += input;
         }
+        std::cout << "new body size:" << body.size() << std::endl;
     }
 
     void parse(std::string input)
@@ -199,6 +204,8 @@ public:
                         bufferIndex++;
                     }
                     bufferIndex += 2;
+                    std::transform(fieldName.begin(), fieldName.end(), fieldName.begin(), [](unsigned char c){ return std::tolower(c); });
+                    std::transform(fieldValue.begin(), fieldValue.end(), fieldValue.begin(), [](unsigned char c){ return std::tolower(c); });
                     headers.insert(std::pair<std::string,std::string>(fieldName,fieldValue));
                     fieldName.clear();
                     fieldValue.clear();
@@ -208,18 +215,22 @@ public:
             if(buffer[bufferIndex - 2] == '\r' && buffer[bufferIndex - 1] == '\n' && buffer[bufferIndex] == '\r' && buffer[bufferIndex + 1] == '\n')
             {
                 bufferIndex += 2; //for final \r\n
+                std::cout << "buffer index" << bufferIndex << std::endl;
+                std::cout << "buffer size" << buffer.size() << std::endl;
                 parseData(buffer.substr(bufferIndex, buffer.size() - bufferIndex));
                 parsingHeader = false;
-                if(headers.find("Content-Length") != headers.end() && std::stoi(headers.find("Content-Length")->second) == body.size())
+                if(headers.find("content-length") != headers.end() && std::stoi(headers.find("content-length")->second) <= body.size())
                 {
                     isDone = true;
                 }
             }
+            std::cout << "content-length" << headers.find("content-length")->second << std::endl;
+            std::cout << input << std::endl;
         }
         else
         {
             parseData(input);
-            if(headers.find("Content-Length") != headers.end() && std::stoi(headers.find("Content-Length")->second) == body.size())
+            if(headers.find("content-length") != headers.end() && std::stoi(headers.find("content-length")->second) == body.size())
             {
                 isDone = true;
             }
@@ -394,7 +405,7 @@ public:
 
         HTTPHeader response;
 
-        char headerBuffer[8192];
+        char headerBuffer[8191];
 
         int headerRecieved;
         if(ssl)
@@ -405,15 +416,12 @@ public:
         {
             headerRecieved = recv(sockfd, headerBuffer, 8191, 0);
         }
-        headerBuffer[headerRecieved] = '\0';
 
-        response.parse(std::string(headerBuffer));
-
-        //std::cout << response.getHeaderString() << std::endl;
+        response.parse(std::string(headerBuffer, headerRecieved));
 
         while(!response.isDone)
         {
-            char buffer[8192];
+            char buffer[8191];
             int recieved;
             if(ssl)
             {
@@ -423,8 +431,8 @@ public:
             {
                 recieved = recv(sockfd, buffer, 8191, 0);
             }
-            buffer[recieved] = '\0';
-            response.parse(std::string(buffer));
+            response.parse(std::string(buffer, recieved));
+            std::cout << recieved << std::endl;
         }
 
         return response;
