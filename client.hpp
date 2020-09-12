@@ -145,8 +145,6 @@ public:
 
     void parseData(const std::string& input)
     {
-        std::cout << "input size:" << input.size() << std::endl;
-        std::cout << "body size:" << body.size() << std::endl;
         if(headers.find("transfer-encoding") != headers.end() && headers.find("transfer-encoding")->second == "chunked")
         {
             parseChunk(input);
@@ -155,7 +153,6 @@ public:
         {
             body += input;
         }
-        std::cout << "new body size:" << body.size() << std::endl;
     }
 
     void parse(std::string input)
@@ -215,8 +212,6 @@ public:
             if(buffer[bufferIndex - 2] == '\r' && buffer[bufferIndex - 1] == '\n' && buffer[bufferIndex] == '\r' && buffer[bufferIndex + 1] == '\n')
             {
                 bufferIndex += 2; //for final \r\n
-                std::cout << "buffer index" << bufferIndex << std::endl;
-                std::cout << "buffer size" << buffer.size() << std::endl;
                 parseData(buffer.substr(bufferIndex, buffer.size() - bufferIndex));
                 parsingHeader = false;
                 if(headers.find("content-length") != headers.end() && std::stoi(headers.find("content-length")->second) <= body.size())
@@ -224,8 +219,6 @@ public:
                     isDone = true;
                 }
             }
-            std::cout << "content-length" << headers.find("content-length")->second << std::endl;
-            std::cout << input << std::endl;
         }
         else
         {
@@ -432,7 +425,6 @@ public:
                 recieved = recv(sockfd, buffer, 8191, 0);
             }
             response.parse(std::string(buffer, recieved));
-            std::cout << recieved << std::endl;
         }
 
         return response;
