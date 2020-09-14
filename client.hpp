@@ -138,7 +138,14 @@ public:
                     int deltaChunkLength = currentChunkLength - currentChunk.size();
                     currentChunk += input.substr(inputIndex, deltaChunkLength);
                     //parseChunk(input.substr(inputIndex + deltaChunkLength + 2, input.size() - (inputIndex + deltaChunkLength + 2)));
-                    parseChunk(std::string(input.begin() + inputIndex + deltaChunkLength + 2, input.end()));
+                    std::cout << "input size:" << input.size() << std::endl;
+                    std::cout << "input index:" << inputIndex << std::endl;
+                    std::cout << "delta chunk length:" << deltaChunkLength << std::endl;
+                    if((inputIndex + deltaChunkLength + 2) < input.size())
+                    {
+                        std::cout << "yes" << std::endl;
+                        parseChunk(std::string(input.begin() + inputIndex + deltaChunkLength + 2, input.end()));
+                    }
                 }
                 else
                 {
