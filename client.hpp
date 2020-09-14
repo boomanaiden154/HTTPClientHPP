@@ -402,6 +402,7 @@ public:
             ssl_ctx = SSL_CTX_new(SSLv23_client_method());
 
             conn = SSL_new(ssl_ctx);
+            SSL_set_tlsext_host_name(conn, websiteURI.domain.c_str());
             SSL_set_fd(conn, sockfd);
 
             SSL_connect(conn);
