@@ -448,7 +448,14 @@ public:
             headerRecieved = recv(sockfd, headerBuffer, 8191, 0);
         }
 
-        response.parse(std::string(headerBuffer, headerRecieved));
+        if(headerRecieved > 0)
+        {
+            response.parse(std::string(headerBuffer, headerRecieved));
+        }
+        else
+        {
+            response.isDone = true;
+        }
 
         while(!response.isDone)
         {
