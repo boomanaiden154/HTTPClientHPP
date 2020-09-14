@@ -115,6 +115,10 @@ public:
                 currentChunkLength = 0;
                 //parse chunk header
                 std::string chunkLength;
+                if(input[inputIndex] == '\r' && input[inputIndex + 1] == '\n')
+                {
+                    inputIndex += 2;
+                }
                 while(input[inputIndex] != '\r' && input[inputIndex] != '\n')
                 {
                     chunkLength += input[inputIndex];
