@@ -196,6 +196,12 @@ public:
                 }
                 else
                 {
+                    //for some sites that send extra spaces preceding values in the header
+                    //not sure if this is compliant with the HTTP specification, but here it is
+                    while(buffer[bufferIndex] == ' ')
+                    {
+                        bufferIndex++;
+                    }
                     while(buffer[bufferIndex] != '\r' && buffer[bufferIndex + 1] != '\n' && bufferIndex < buffer.size())
                     {
                         fieldValue += buffer[bufferIndex];
